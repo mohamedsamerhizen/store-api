@@ -1,0 +1,98 @@
+2026-03-05 02:01:20.026 +03:00 [INF] Acquiring an exclusive lock for migration application. See https://aka.ms/efcore-docs-migrations-lock for more information if this takes too long.
+2026-03-05 02:01:20.065 +03:00 [INF] Executed DbCommand (6ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsLock' AND "type" = 'table';
+2026-03-05 02:01:20.073 +03:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+INSERT OR IGNORE INTO "__EFMigrationsLock"("Id", "Timestamp") VALUES(1, '2026-03-04 23:01:20.0702606+00:00');
+SELECT changes();
+2026-03-05 02:01:20.099 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+    "MigrationId" TEXT NOT NULL CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY,
+    "ProductVersion" TEXT NOT NULL
+);
+2026-03-05 02:01:20.105 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-05 02:01:20.108 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-03-05 02:01:20.118 +03:00 [INF] Applying migration '20260304230108_AddCartItemUpdatedAt'.
+2026-03-05 02:01:20.140 +03:00 [ERR] The migration operation 'PRAGMA foreign_keys = 0;
+' from migration 'AddCartItemUpdatedAt' cannot be executed in a transaction. If the app is terminated or an unrecoverable error occurs while this operation is being executed then the migration will be left in a partially applied state and would need to be reverted manually before it can be applied again. Create a separate migration that contains just this operation.
+2026-03-05 02:01:20.143 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+ALTER TABLE "OrderItem" RENAME TO "OrderItems";
+2026-03-05 02:01:20.144 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+ALTER TABLE "Order" RENAME TO "Orders";
+2026-03-05 02:01:20.146 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DROP INDEX "IX_OrderItem_ProductId";
+2026-03-05 02:01:20.147 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_OrderItems_ProductId" ON "OrderItems" ("ProductId");
+2026-03-05 02:01:20.148 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DROP INDEX "IX_OrderItem_OrderId";
+2026-03-05 02:01:20.149 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_OrderItems_OrderId" ON "OrderItems" ("OrderId");
+2026-03-05 02:01:20.150 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DROP INDEX "IX_Order_UserId";
+2026-03-05 02:01:20.152 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_Orders_UserId" ON "Orders" ("UserId");
+2026-03-05 02:01:20.153 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+ALTER TABLE "CartItems" ADD "UpdatedAtUtc" TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';
+2026-03-05 02:01:20.155 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "ef_temp_Orders" (
+    "Id" INTEGER NOT NULL CONSTRAINT "PK_Orders" PRIMARY KEY AUTOINCREMENT,
+    "AddressLine1" TEXT NOT NULL,
+    "AddressLine2" TEXT NULL,
+    "City" TEXT NOT NULL,
+    "CreatedAtUtc" TEXT NOT NULL,
+    "FullName" TEXT NOT NULL,
+    "Notes" TEXT NULL,
+    "PhoneNumber" TEXT NOT NULL,
+    "ShippingFee" TEXT NOT NULL,
+    "Status" INTEGER NOT NULL,
+    "Subtotal" TEXT NOT NULL,
+    "Total" TEXT NOT NULL,
+    "UserId" TEXT NOT NULL,
+    CONSTRAINT "FK_Orders_AspNetUsers_UserId" FOREIGN KEY ("UserId") REFERENCES "AspNetUsers" ("Id") ON DELETE RESTRICT
+);
+2026-03-05 02:01:20.157 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+INSERT INTO "ef_temp_Orders" ("Id", "AddressLine1", "AddressLine2", "City", "CreatedAtUtc", "FullName", "Notes", "PhoneNumber", "ShippingFee", "Status", "Subtotal", "Total", "UserId")
+SELECT "Id", "AddressLine1", "AddressLine2", "City", "CreatedAtUtc", "FullName", "Notes", "PhoneNumber", "ShippingFee", "Status", "Subtotal", "Total", "UserId"
+FROM "Orders";
+2026-03-05 02:01:20.158 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "ef_temp_OrderItems" (
+    "Id" INTEGER NOT NULL CONSTRAINT "PK_OrderItems" PRIMARY KEY AUTOINCREMENT,
+    "LineTotal" TEXT NOT NULL,
+    "OrderId" INTEGER NOT NULL,
+    "ProductId" INTEGER NOT NULL,
+    "ProductName" TEXT NOT NULL,
+    "Quantity" INTEGER NOT NULL,
+    "UnitPrice" TEXT NOT NULL,
+    CONSTRAINT "FK_OrderItems_Orders_OrderId" FOREIGN KEY ("OrderId") REFERENCES "Orders" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_OrderItems_Products_ProductId" FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE RESTRICT
+);
+2026-03-05 02:01:20.160 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+INSERT INTO "ef_temp_OrderItems" ("Id", "LineTotal", "OrderId", "ProductId", "ProductName", "Quantity", "UnitPrice")
+SELECT "Id", "LineTotal", "OrderId", "ProductId", "ProductName", "Quantity", "UnitPrice"
+FROM "OrderItems";
+2026-03-05 02:01:20.164 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+PRAGMA foreign_keys = 0;
+2026-03-05 02:01:20.165 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DROP TABLE "Orders";
+2026-03-05 02:01:20.167 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+ALTER TABLE "ef_temp_Orders" RENAME TO "Orders";
+2026-03-05 02:01:20.168 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DROP TABLE "OrderItems";
+2026-03-05 02:01:20.170 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+ALTER TABLE "ef_temp_OrderItems" RENAME TO "OrderItems";
+2026-03-05 02:01:20.172 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+PRAGMA foreign_keys = 1;
+2026-03-05 02:01:20.173 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_Orders_UserId" ON "Orders" ("UserId");
+2026-03-05 02:01:20.175 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_OrderItems_OrderId" ON "OrderItems" ("OrderId");
+2026-03-05 02:01:20.176 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_OrderItems_ProductId" ON "OrderItems" ("ProductId");
+2026-03-05 02:01:20.179 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20260304230108_AddCartItemUpdatedAt', '9.0.0');
+2026-03-05 02:01:20.181 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+DELETE FROM "__EFMigrationsLock";

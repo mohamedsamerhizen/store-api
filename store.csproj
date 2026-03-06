@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Common\" />
+    <Folder Include="Controllers\" />
+    <Folder Include="Data\" />
+    <Folder Include="Dtos\" />
+    <Folder Include="Dtos\Auth\" />
+    <Folder Include="Dtos\Cart\" />
+    <Folder Include="Dtos\Categories\" />
+    <Folder Include="Dtos\Orders\" />
+    <Folder Include="Dtos\Products\" />
+    <Folder Include="Middlewares\" />
+    <Folder Include="Modles\" />
+    <Folder Include="Services\" />
+    <Folder Include="Services\Orders\" />
+    <Folder Include="Services\Products\" />
+    <Folder Include="Validation\" />
+    <Folder Include="Validation\Auth\" />
+    <Folder Include="Validation\Cart\" />
+    <Folder Include="Validation\Categories\" />
+    <Folder Include="Validation\Orders\" />
+    <Folder Include="Validation\Products\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+</Project>
