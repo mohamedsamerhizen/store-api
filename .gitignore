@@ -1,7 +1,0 @@
-bin/
-obj/
-logs/
-*.db-shm
-*.db-wal
-.vs/
-.vscode/

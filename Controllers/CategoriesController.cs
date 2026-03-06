@@ -19,12 +19,8 @@ public class CategoriesController : ControllerBase
         _db = db;
     }
 
-    // =========================================
-    // GET CATEGORIES (Pagination + Search)
-    // =========================================
     [HttpGet]
-    public async Task<IActionResult> GetCategories(
-        [FromQuery] CategoryQueryParams queryParams)
+    public async Task<IActionResult> GetCategories([FromQuery] CategoryQueryParams queryParams)
     {
         if (queryParams.Page <= 0)
             queryParams.Page = 1;
@@ -74,9 +70,6 @@ public class CategoriesController : ControllerBase
         });
     }
 
-    // =========================================
-    // ADMIN: CREATE CATEGORY
-    // =========================================
     [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<IActionResult> Create(CategoryCreateDto dto)
@@ -100,9 +93,6 @@ public class CategoriesController : ControllerBase
         });
     }
 
-    // =========================================
-    // ADMIN: UPDATE CATEGORY
-    // =========================================
     [Authorize(Roles = "Admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, CategoryUpdateDto dto)
@@ -133,9 +123,6 @@ public class CategoriesController : ControllerBase
         });
     }
 
-    // =========================================
-    // ADMIN: SOFT DELETE CATEGORY
-    // =========================================
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)

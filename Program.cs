@@ -1,16 +1,15 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using store.Data;
-using store.Middlewares;
 using store.Models;
 using store.Services.Orders;
 using store.Services.Products;
+using store.Middlewares;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -37,13 +36,6 @@ builder.Host.UseSerilog();
 //////////////////////////////////////////////////////////
 
 builder.Services.AddControllers();
-
-//////////////////////////////////////////////////////////
-// Swagger
-//////////////////////////////////////////////////////////
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 //////////////////////////////////////////////////////////
 // Response Caching
@@ -89,11 +81,11 @@ builder.Services
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme = "Bearer";
+        options.DefaultChallengeScheme = "Bearer";
+        options.DefaultScheme = "Bearer";
     })
-    .AddJwtBearer(options =>
+    .AddJwtBearer("Bearer", options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -101,10 +93,13 @@ builder.Services
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
+
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+                Encoding.UTF8.GetBytes(
+                    builder.Configuration["Jwt:Key"]!))
         };
     });
 
@@ -115,13 +110,13 @@ builder.Services.AddAuthorization();
 //////////////////////////////////////////////////////////
 
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ProductCacheService>();
 
 //////////////////////////////////////////////////////////
 // Memory Cache
 //////////////////////////////////////////////////////////
 
 builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ProductCacheService>();
 
 //////////////////////////////////////////////////////////
 // Health Checks
@@ -152,16 +147,6 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
-
-//////////////////////////////////////////////////////////
-// Swagger Middleware
-//////////////////////////////////////////////////////////
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 //////////////////////////////////////////////////////////
 // Middleware
@@ -207,6 +192,7 @@ using (var scope = app.Services.CreateScope())
 try
 {
     Log.Information("Application starting up");
+
     app.Run();
 }
 catch (Exception ex)
