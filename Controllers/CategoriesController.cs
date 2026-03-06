@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using store.Data;
-using store.Models;
-using store.Dtos.Categories;
 using store.Common;
+using store.Data;
+using store.Dtos.Categories;
+using store.Models;
 
 namespace store.Controllers;
 
@@ -23,10 +23,12 @@ public class CategoriesController : ControllerBase
     // GET CATEGORIES (Pagination + Search)
     // =========================================
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<PagedCategoriesDto>>> GetCategories(
+    public async Task<IActionResult> GetCategories(
         [FromQuery] CategoryQueryParams queryParams)
     {
-        if (queryParams.Page <= 0) queryParams.Page = 1;
+        if (queryParams.Page <= 0)
+            queryParams.Page = 1;
+
         if (queryParams.PageSize <= 0 || queryParams.PageSize > 50)
             queryParams.PageSize = 10;
 
@@ -64,7 +66,12 @@ public class CategoriesController : ControllerBase
             Data = categories
         };
 
-        return Ok(ApiResponse<PagedCategoriesDto>.SuccessResponse(result));
+        return Ok(new ApiResponse
+        {
+            Success = true,
+            Message = "Categories retrieved successfully",
+            Data = result
+        });
     }
 
     // =========================================
@@ -85,7 +92,12 @@ public class CategoriesController : ControllerBase
         _db.Categories.Add(category);
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<string>.SuccessResponse("Category created successfully"));
+        return Ok(new ApiResponse
+        {
+            Success = true,
+            Message = "Category created successfully",
+            Data = category
+        });
     }
 
     // =========================================
@@ -98,7 +110,13 @@ public class CategoriesController : ControllerBase
         var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == id);
 
         if (category is null)
-            return NotFound(ApiResponse<string>.FailResponse("Category not found"));
+        {
+            return NotFound(new ApiResponse
+            {
+                Success = false,
+                Message = "Category not found"
+            });
+        }
 
         category.Name = dto.Name;
         category.Description = dto.Description;
@@ -107,7 +125,12 @@ public class CategoriesController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<string>.SuccessResponse("Category updated successfully"));
+        return Ok(new ApiResponse
+        {
+            Success = true,
+            Message = "Category updated successfully",
+            Data = category
+        });
     }
 
     // =========================================
@@ -122,17 +145,32 @@ public class CategoriesController : ControllerBase
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (category is null)
-            return NotFound(ApiResponse<string>.FailResponse("Category not found"));
+        {
+            return NotFound(new ApiResponse
+            {
+                Success = false,
+                Message = "Category not found"
+            });
+        }
 
         if (category.Products.Any(p => p.IsActive))
-            return BadRequest(ApiResponse<string>.FailResponse(
-                "Cannot deactivate category with active products"));
+        {
+            return BadRequest(new ApiResponse
+            {
+                Success = false,
+                Message = "Cannot deactivate category with active products"
+            });
+        }
 
         category.IsActive = false;
         category.UpdatedAtUtc = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<string>.SuccessResponse("Category deactivated successfully"));
+        return Ok(new ApiResponse
+        {
+            Success = true,
+            Message = "Category deactivated successfully"
+        });
     }
 }
