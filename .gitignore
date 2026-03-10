@@ -1,7 +1,33 @@
+# Build output
 bin/
 obj/
+
+# Logs
 logs/
+*.log
+
+# SQLite sidecar files
 *.db-shm
 *.db-wal
+
+# IDE folders
 .vs/
 .vscode/
+.idea/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary / generated files
+*.tmp
+structure.txt
+
+# Published output
+publish/
+out/

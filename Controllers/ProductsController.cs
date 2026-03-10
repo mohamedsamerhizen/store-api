@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using store.Common;
-using store.Data;
-using store.Models;
+using store.Dtos.Products;
 using store.Services.Products;
 
 namespace store.Controllers
@@ -13,23 +10,14 @@ namespace store.Controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly ProductCacheService _cacheService;
+        private readonly IProductService _productService;
 
-        public ProductsController(
-            AppDbContext db,
-            ProductCacheService cacheService)
+        public ProductsController(IProductService productService)
         {
-            _db = db;
-            _cacheService = cacheService;
+            _productService = productService;
         }
 
-        //////////////////////////////////////////////////////////
-        // Get Products
-        //////////////////////////////////////////////////////////
-
         [HttpGet]
-        [EnableRateLimiting("api")]
         [ResponseCache(Duration = 60)]
         public async Task<IActionResult> GetProducts(
             int page = 1,
@@ -37,172 +25,44 @@ namespace store.Controllers
             string? search = null,
             int? categoryId = null)
         {
-            var query = _db.Products
-                .Include(p => p.Category)
-                .Where(p => p.IsActive)
-                .AsQueryable();
+            var result = await _productService.GetProductsAsync(page, pageSize, search, categoryId);
 
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(p =>
-                    p.Name.Contains(search));
-            }
-
-            if (categoryId.HasValue)
-            {
-                query = query.Where(p =>
-                    p.CategoryId == categoryId.Value);
-            }
-
-            var total = await query.CountAsync();
-
-            var products = await query
-                .OrderByDescending(p => p.CreatedAtUtc)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Products retrieved successfully",
-                Data = new
-                {
-                    TotalCount = total,
-                    Page = page,
-                    PageSize = pageSize,
-                    Items = products
-                }
-            });
+            return Ok(ApiResponse.SuccessResponse("Products retrieved successfully.", result));
         }
-
-        //////////////////////////////////////////////////////////
-        // Get Product By Id
-        //////////////////////////////////////////////////////////
 
         [HttpGet("{id}")]
-        [EnableRateLimiting("api")]
         public async Task<IActionResult> GetProduct(int id)
         {
-            var product = await _db.Products
-                .Include(p => p.Category)
-                .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
+            var product = await _productService.GetProductByIdAsync(id);
 
-            if (product == null)
-            {
-                return NotFound(new ApiResponse
-                {
-                    Success = false,
-                    Message = "Product not found"
-                });
-            }
-
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Product retrieved successfully",
-                Data = product
-            });
+            return Ok(ApiResponse.SuccessResponse("Product retrieved successfully.", product));
         }
-
-        //////////////////////////////////////////////////////////
-        // Create Product (Admin)
-        //////////////////////////////////////////////////////////
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateProduct(Product product)
+        public async Task<IActionResult> CreateProduct([FromBody] ProductCreateDto dto)
         {
-            product.CreatedAtUtc = DateTime.UtcNow;
+            var product = await _productService.CreateProductAsync(dto);
 
-            _db.Products.Add(product);
-
-            await _db.SaveChangesAsync();
-
-            _cacheService.ClearCache();
-
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Product created successfully",
-                Data = product
-            });
+            return Ok(ApiResponse.SuccessResponse("Product created successfully.", product));
         }
-
-        //////////////////////////////////////////////////////////
-        // Update Product (Admin)
-        //////////////////////////////////////////////////////////
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateProduct(
-            int id,
-            Product updated)
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateDto dto)
         {
-            var product = await _db.Products
-                .FirstOrDefaultAsync(p => p.Id == id);
+            var product = await _productService.UpdateProductAsync(id, dto);
 
-            if (product == null)
-            {
-                return NotFound(new ApiResponse
-                {
-                    Success = false,
-                    Message = "Product not found"
-                });
-            }
-
-            product.Name = updated.Name;
-            product.Description = updated.Description;
-            product.Price = updated.Price;
-            product.Stock = updated.Stock;
-            product.CategoryId = updated.CategoryId;
-            product.ImageUrl = updated.ImageUrl;
-            product.UpdatedAtUtc = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-
-            _cacheService.ClearCache();
-
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Product updated successfully",
-                Data = product
-            });
+            return Ok(ApiResponse.SuccessResponse("Product updated successfully.", product));
         }
-
-        //////////////////////////////////////////////////////////
-        // Soft Delete Product (Admin)
-        //////////////////////////////////////////////////////////
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = await _db.Products
-                .FirstOrDefaultAsync(p => p.Id == id);
+            await _productService.DeleteProductAsync(id);
 
-            if (product == null)
-            {
-                return NotFound(new ApiResponse
-                {
-                    Success = false,
-                    Message = "Product not found"
-                });
-            }
-
-            product.IsActive = false;
-            product.UpdatedAtUtc = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-
-            _cacheService.ClearCache();
-
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Product deleted successfully"
-            });
+            return Ok(ApiResponse.SuccessResponse("Product deleted successfully."));
         }
     }
 }

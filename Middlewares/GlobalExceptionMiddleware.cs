@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Text.Json;
+using store.Common;
 
 namespace store.Middlewares
 {
@@ -25,22 +25,40 @@ namespace store.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception occurred");
-
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                context.Response.ContentType = "application/json";
-
-                var response = new ProblemDetails
-                {
-                    Title = "An error occurred",
-                    Detail = ex.Message,
-                    Status = context.Response.StatusCode
-                };
-
-                var json = JsonSerializer.Serialize(response);
-
-                await context.Response.WriteAsync(json);
+                await HandleExceptionAsync(context, ex);
             }
+        }
+
+        private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+        {
+            var statusCode = exception switch
+            {
+                UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+                KeyNotFoundException => (int)HttpStatusCode.NotFound,
+                ArgumentException => (int)HttpStatusCode.BadRequest,
+                InvalidOperationException => (int)HttpStatusCode.BadRequest,
+                _ => (int)HttpStatusCode.InternalServerError
+            };
+
+            if (statusCode >= 500)
+            {
+                _logger.LogError(exception, "Unhandled server error occurred.");
+            }
+            else
+            {
+                _logger.LogWarning(exception, "Handled application exception occurred.");
+            }
+
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentType = "application/json";
+
+            var response = statusCode == (int)HttpStatusCode.InternalServerError
+                ? ApiResponse.FailResponse("An unexpected error occurred.")
+                : ApiResponse.FailResponse(exception.Message);
+
+            var json = JsonSerializer.Serialize(response);
+
+            await context.Response.WriteAsync(json);
         }
     }
 }

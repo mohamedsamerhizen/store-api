@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using store.Common;
 using store.Dtos.Auth;
 using store.Models;
 using System.IdentityModel.Tokens.Jwt;
@@ -28,8 +29,14 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterDto dto)
+    public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
+        var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+        if (existingUser is not null)
+        {
+            return BadRequest(ApiResponse.FailResponse("Email is already registered."));
+        }
+
         var user = new ApplicationUser
         {
             UserName = dto.Email,
@@ -38,56 +45,87 @@ public class AuthController : ControllerBase
         };
 
         var result = await _userManager.CreateAsync(user, dto.Password);
-        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        if (!result.Succeeded)
+        {
+            var errors = result.Errors.Select(e => e.Description).ToList();
+
+            return BadRequest(ApiResponse.FailResponse("Registration failed.", errors));
+        }
 
         if (!await _roleManager.RoleExistsAsync("User"))
+        {
             await _roleManager.CreateAsync(new IdentityRole("User"));
+        }
 
         await _userManager.AddToRoleAsync(user, "User");
 
-        return Ok(new { message = "Registered" });
+        return Ok(ApiResponse.SuccessResponse("Registered successfully."));
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto dto)
+    public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
-        if (user is null) return Unauthorized("Invalid credentials");
+        if (user is null)
+        {
+            return Unauthorized(ApiResponse.FailResponse("Invalid credentials."));
+        }
 
-        var ok = await _userManager.CheckPasswordAsync(user, dto.Password);
-        if (!ok) return Unauthorized("Invalid credentials");
+        var passwordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
+        if (!passwordValid)
+        {
+            return Unauthorized(ApiResponse.FailResponse("Invalid credentials."));
+        }
 
         var roles = await _userManager.GetRolesAsync(user);
-
         var token = GenerateJwt(user, roles);
-        return Ok(new { token });
+
+        var responseData = new
+        {
+            token,
+            email = user.Email,
+            fullName = user.FullName,
+            roles
+        };
+
+        return Ok(ApiResponse.SuccessResponse("Login successful.", responseData));
     }
 
     private string GenerateJwt(ApplicationUser user, IList<string> roles)
     {
         var jwt = _config.GetSection("Jwt");
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var key = jwt["Key"] ?? throw new InvalidOperationException("Jwt:Key is missing.");
+        var issuer = jwt["Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is missing.");
+        var audience = jwt["Audience"] ?? throw new InvalidOperationException("Jwt:Audience is missing.");
+        var expiryMinutesValue = jwt["ExpiryMinutes"] ?? throw new InvalidOperationException("Jwt:ExpiryMinutes is missing.");
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
             new Claim("fullName", user.FullName)
         };
 
         foreach (var role in roles)
+        {
             claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
-        var expires = DateTime.UtcNow.AddMinutes(int.Parse(jwt["ExpiryMinutes"]!));
+        var expires = DateTime.UtcNow.AddMinutes(int.Parse(expiryMinutesValue));
 
         var token = new JwtSecurityToken(
-            issuer: jwt["Issuer"],
-            audience: jwt["Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: expires,
-            signingCredentials: creds);
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

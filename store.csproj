@@ -17,12 +17,12 @@
     <Folder Include="Dtos\Orders\" />
     <Folder Include="Dtos\Products\" />
     <Folder Include="Middlewares\" />
-    <Folder Include="Modles\" />
+    <Folder Include="Models\" />
     <Folder Include="Services\" />
+    <Folder Include="Services\Cart\" />
+    <Folder Include="Services\Categories\" />
     <Folder Include="Services\Orders\" />
     <Folder Include="Services\Products\" />
-    <Folder Include="Validation\" />
-    <Folder Include="Validation\Auth\" />
     <Folder Include="Validation\Cart\" />
     <Folder Include="Validation\Categories\" />
     <Folder Include="Validation\Orders\" />
@@ -39,6 +39,7 @@
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
   </ItemGroup>
 
 </Project>

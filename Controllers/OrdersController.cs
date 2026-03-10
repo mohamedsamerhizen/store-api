@@ -1,9 +1,10 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using store.Common;
+using store.Dtos.Orders;
 using store.Models;
 using store.Services.Orders;
-using System.Security.Claims;
 
 namespace store.Controllers
 {
@@ -20,27 +21,18 @@ namespace store.Controllers
         }
 
         [HttpPost("checkout")]
-        public async Task<IActionResult> Checkout()
+        public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrWhiteSpace(userId))
             {
-                return Unauthorized(new ApiResponse
-                {
-                    Success = false,
-                    Message = "User not authenticated"
-                });
+                return Unauthorized(ApiResponse.FailResponse("User not authenticated."));
             }
 
-            var order = await _orderService.CheckoutAsync(userId);
+            var order = await _orderService.CheckoutAsync(userId, request);
 
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Order created successfully",
-                Data = order
-            });
+            return Ok(ApiResponse.SuccessResponse("Order created successfully.", order));
         }
 
         [HttpGet("my-orders")]
@@ -50,63 +42,30 @@ namespace store.Controllers
 
             if (string.IsNullOrWhiteSpace(userId))
             {
-                return Unauthorized(new ApiResponse
-                {
-                    Success = false,
-                    Message = "User not authenticated"
-                });
+                return Unauthorized(ApiResponse.FailResponse("User not authenticated."));
             }
 
             var orders = await _orderService.GetUserOrdersAsync(userId);
 
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Orders retrieved successfully",
-                Data = orders
-            });
+            return Ok(ApiResponse.SuccessResponse("Orders retrieved successfully.", orders));
         }
 
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllOrders(
-            int page = 1,
-            int pageSize = 10)
+        public async Task<IActionResult> GetAllOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             var result = await _orderService.GetAllOrdersAsync(page, pageSize);
 
-            return Ok(new ApiResponse
-            {
-                Success = true,
-                Message = "Orders retrieved successfully",
-                Data = result
-            });
+            return Ok(ApiResponse.SuccessResponse("Orders retrieved successfully.", result));
         }
 
         [HttpPut("{orderId}/status")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateOrderStatus(
-            int orderId,
-            [FromQuery] OrderStatus status)
+        public async Task<IActionResult> UpdateOrderStatus(int orderId, [FromQuery] OrderStatus status)
         {
-            try
-            {
-                await _orderService.UpdateOrderStatusAsync(orderId, status);
+            await _orderService.UpdateOrderStatusAsync(orderId, status);
 
-                return Ok(new ApiResponse
-                {
-                    Success = true,
-                    Message = "Order status updated"
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse
-                {
-                    Success = false,
-                    Message = ex.Message
-                });
-            }
+            return Ok(ApiResponse.SuccessResponse("Order status updated successfully."));
         }
     }
 }

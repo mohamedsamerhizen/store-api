@@ -4,14 +4,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using store.Data;
+using store.Middlewares;
 using store.Models;
+using store.Services.Cart;
+using store.Services.Categories;
 using store.Services.Orders;
 using store.Services.Products;
-using store.Middlewares;
 using System.Text;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +80,14 @@ builder.Services
 // JWT Authentication
 //////////////////////////////////////////////////////////
 
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSection["Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is missing from configuration.");
+var jwtIssuer = jwtSection["Issuer"]
+    ?? throw new InvalidOperationException("Jwt:Issuer is missing from configuration.");
+var jwtAudience = jwtSection["Audience"]
+    ?? throw new InvalidOperationException("Jwt:Audience is missing from configuration.");
+
 builder.Services
     .AddAuthentication(options =>
     {
@@ -93,13 +103,10 @@ builder.Services
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:Key"]!))
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.Zero
         };
     });
 
@@ -109,7 +116,10 @@ builder.Services.AddAuthorization();
 // Application Services
 //////////////////////////////////////////////////////////
 
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 //////////////////////////////////////////////////////////
 // Memory Cache
@@ -132,6 +142,8 @@ builder.Services
 
 builder.Services.AddRateLimiter(options =>
 {
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
     options.AddFixedWindowLimiter("api", config =>
     {
         config.Window = TimeSpan.FromMinutes(1);
@@ -141,10 +153,41 @@ builder.Services.AddRateLimiter(options =>
 });
 
 //////////////////////////////////////////////////////////
-// Problem Details
+// Swagger
 //////////////////////////////////////////////////////////
 
-builder.Services.AddProblemDetails();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "store API",
+        Version = "v1",
+        Description = "Professional e-commerce backend built with ASP.NET Core Web API."
+    });
+
+    var jwtSecurityScheme = new OpenApiSecurityScheme
+    {
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Description = "Enter JWT Bearer token only.",
+        Reference = new OpenApiReference
+        {
+            Id = "Bearer",
+            Type = ReferenceType.SecurityScheme
+        }
+    };
+
+    options.AddSecurityDefinition("Bearer", jwtSecurityScheme);
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { jwtSecurityScheme, Array.Empty<string>() }
+    });
+});
 
 var app = builder.Build();
 
@@ -152,9 +195,15 @@ var app = builder.Build();
 // Middleware
 //////////////////////////////////////////////////////////
 
-app.UseExceptionHandler();
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSerilogRequestLogging();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseResponseCaching();
 
@@ -165,11 +214,11 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+//////////////////////////////////////////////////////////
+// Endpoints
+//////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////
-// Health Check Endpoint
-//////////////////////////////////////////////////////////
+app.MapControllers().RequireRateLimiting("api");
 
 app.MapHealthChecks("/health");
 
@@ -192,7 +241,6 @@ using (var scope = app.Services.CreateScope())
 try
 {
     Log.Information("Application starting up");
-
     app.Run();
 }
 catch (Exception ex)
