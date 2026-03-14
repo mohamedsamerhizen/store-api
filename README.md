@@ -1,46 +1,46 @@
-# store API
+# Store API
 
 A production-style e-commerce backend built with **.NET 9** and **ASP.NET Core Web API**.
 
-This project was built as a backend portfolio project with a focus on clean structure, authentication and authorization, practical business logic, validation, error handling, and real-world API design.
+This project was developed as a backend portfolio project to demonstrate practical API design, authentication and authorization, business rule enforcement, validation, error handling, and maintainable service-based architecture using the ASP.NET Core ecosystem.
 
 ---
 
 ## Overview
 
-`store API` is an e-commerce backend that supports the main workflow of an online store:
+`Store API` is a backend for a simple online store that covers the core workflow of an e-commerce system:
 
 - user registration and login
 - JWT-based authentication
 - role-based authorization
 - category and product management
-- shopping cart operations
+- cart operations
 - checkout and order creation
 - order status management
 - stock updates during checkout and cancellation
 
-The project is designed as a portfolio backend to demonstrate backend engineering skills using the ASP.NET Core ecosystem.
+The project focuses on clean structure and realistic backend concerns rather than only basic CRUD operations.
 
 ---
 
 ## Tech Stack
 
-- .NET 9
-- ASP.NET Core Web API
-- Entity Framework Core
-- SQLite
-- ASP.NET Identity
-- JWT Authentication
-- FluentValidation
-- Serilog
-- Swagger / OpenAPI
-- Health Checks
-- Rate Limiting
-- Response Caching
+- **.NET 9**
+- **ASP.NET Core Web API**
+- **Entity Framework Core**
+- **SQLite**
+- **ASP.NET Identity**
+- **JWT Authentication**
+- **FluentValidation**
+- **Serilog**
+- **Swagger / OpenAPI**
+- **Health Checks**
+- **Rate Limiting**
+- **In-Memory Caching**
 
 ---
 
-## Main Features
+## Features
 
 ### Authentication and Authorization
 - User registration
@@ -49,66 +49,63 @@ The project is designed as a portfolio backend to demonstrate backend engineerin
 - Role-based authorization
 - Admin / User separation
 
-### Products and Categories
+### Categories
+- Get categories with pagination
+- Search categories
+- Optional inactive category filtering
+- Create category
+- Update category
+- Deactivate category
+- Prevent deactivation when a category contains active products
+
+### Products
 - Public product listing
 - Product details endpoint
-- Product search
-- Pagination support
+- Search products
 - Category filtering
-- Admin-only category management
-- Admin-only product management
-- Soft delete for products and categories
+- Pagination support
+- Admin-only create, update, and delete operations
+- Cache invalidation after write operations
 
 ### Cart
 - Get current user cart
-- Add product to cart
-- Update cart item quantity
-- Remove cart item
+- Add item to cart
+- Update item quantity
+- Remove item from cart
 - Clear cart
 
 ### Orders
 - Checkout from cart
-- Save shipping information with each order
+- Save shipping details with each order
 - Get current user orders
-- Admin can get all orders
-- Admin can update order status
-- Stock decreases on checkout
-- Stock is restored when an order is cancelled
+- Get all orders as admin
+- Update order status as admin
+- Decrease stock during checkout
+- Restore stock when cancelling an order
+- Prevent invalid order status transitions
 
-### API Quality and Stability
-- Global exception handling
-- Unified API response format
+### Cross-Cutting Concerns
 - FluentValidation for request validation
+- Global exception handling middleware
+- Unified API response format
 - Structured logging with Serilog
 - Health check endpoint
-- Response caching
-- Rate limiting
-- Swagger UI for testing endpoints
+- Fixed-window rate limiting
 
 ---
 
 ## Project Structure
 
 ```text
-store
-├── Common
-├── Controllers
-├── Data
-├── Dtos
-│   ├── Auth
-│   ├── Cart
-│   ├── Categories
-│   ├── Orders
-│   └── Products
-├── Middlewares
-├── Migrations
-├── Models
-├── Properties
-├── Services
-│   ├── Cart
-│   ├── Categories
-│   ├── Orders
-│   └── Products
-├── Validation
+store/
+├── Common/
+├── Controllers/
+├── Data/
+├── Dtos/
+├── Middlewares/
+├── Models/
+├── Services/
+├── Validation/
+├── Migrations/
 ├── Program.cs
-└── store.csproj
+└── appsettings.json
