@@ -1,11 +1,13 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using store.Common;
 using store.Data;
 using store.Middlewares;
 using store.Models;
@@ -13,6 +15,7 @@ using store.Services.Cart;
 using store.Services.Categories;
 using store.Services.Orders;
 using store.Services.Products;
+using System.Linq;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,16 +37,27 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 //////////////////////////////////////////////////////////
-// Controllers
+// Controllers + Consistent Validation Response
 //////////////////////////////////////////////////////////
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(x => x.Value is not null && x.Value.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
 
-//////////////////////////////////////////////////////////
-// Response Caching
-//////////////////////////////////////////////////////////
-
-builder.Services.AddResponseCaching();
+            return new BadRequestObjectResult(
+                ApiResponse.FailResponse("Validation failed.", errors)
+            );
+        };
+    });
 
 //////////////////////////////////////////////////////////
 // FluentValidation
@@ -81,10 +95,13 @@ builder.Services
 //////////////////////////////////////////////////////////
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
+
 var jwtKey = jwtSection["Key"]
     ?? throw new InvalidOperationException("Jwt:Key is missing from configuration.");
+
 var jwtIssuer = jwtSection["Issuer"]
     ?? throw new InvalidOperationException("Jwt:Issuer is missing from configuration.");
+
 var jwtAudience = jwtSection["Audience"]
     ?? throw new InvalidOperationException("Jwt:Audience is missing from configuration.");
 
@@ -157,6 +174,7 @@ builder.Services.AddRateLimiter(options =>
 //////////////////////////////////////////////////////////
 
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -196,7 +214,6 @@ var app = builder.Build();
 //////////////////////////////////////////////////////////
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
-
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
@@ -204,10 +221,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseResponseCaching();
-
-app.UseMiddleware<ETagMiddleware>();
 
 app.UseRateLimiter();
 
@@ -219,7 +232,6 @@ app.UseAuthorization();
 //////////////////////////////////////////////////////////
 
 app.MapControllers().RequireRateLimiting("api");
-
 app.MapHealthChecks("/health");
 
 //////////////////////////////////////////////////////////

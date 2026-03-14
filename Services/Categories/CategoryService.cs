@@ -67,8 +67,8 @@ namespace store.Services.Categories
         {
             var category = new Category
             {
-                Name = dto.Name,
-                Description = dto.Description,
+                Name = dto.Name.Trim(),
+                Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow
             };
@@ -88,9 +88,8 @@ namespace store.Services.Categories
                 throw new KeyNotFoundException("Category not found.");
             }
 
-            category.Name = dto.Name;
-            category.Description = dto.Description;
-            category.IsActive = dto.IsActive;
+            category.Name = dto.Name.Trim();
+            category.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
             category.UpdatedAtUtc = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
@@ -107,6 +106,11 @@ namespace store.Services.Categories
             if (category is null)
             {
                 throw new KeyNotFoundException("Category not found.");
+            }
+
+            if (!category.IsActive)
+            {
+                throw new InvalidOperationException("Category is already inactive.");
             }
 
             if (category.Products.Any(p => p.IsActive))

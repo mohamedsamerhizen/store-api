@@ -31,7 +31,7 @@ namespace store.Controllers
         {
             var category = await _categoryService.CreateAsync(dto);
 
-            return Ok(ApiResponse.SuccessResponse("Category created successfully.", category));
+            return StatusCode(201, ApiResponse.SuccessResponse("Category created successfully.", category));
         }
 
         [HttpPut("{id}")]

@@ -8,23 +8,38 @@ namespace store.Common
 
         public object? Data { get; set; }
 
+        public object? Errors { get; set; }
+
         public static ApiResponse SuccessResponse(string message, object? data = null)
         {
             return new ApiResponse
             {
                 Success = true,
                 Message = message,
-                Data = data
+                Data = data,
+                Errors = null
             };
         }
 
-        public static ApiResponse FailResponse(string message, object? data = null)
+        public static ApiResponse FailResponse(string message)
         {
             return new ApiResponse
             {
                 Success = false,
                 Message = message,
-                Data = data
+                Data = null,
+                Errors = null
+            };
+        }
+
+        public static ApiResponse FailResponse(string message, object? errors)
+        {
+            return new ApiResponse
+            {
+                Success = false,
+                Message = message,
+                Data = null,
+                Errors = errors
             };
         }
     }

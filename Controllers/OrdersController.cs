@@ -32,7 +32,7 @@ namespace store.Controllers
 
             var order = await _orderService.CheckoutAsync(userId, request);
 
-            return Ok(ApiResponse.SuccessResponse("Order created successfully.", order));
+            return StatusCode(201, ApiResponse.SuccessResponse("Order created successfully.", order));
         }
 
         [HttpGet("my-orders")]

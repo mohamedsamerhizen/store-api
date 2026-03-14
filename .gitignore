@@ -6,7 +6,8 @@ obj/
 logs/
 *.log
 
-# SQLite sidecar files
+# SQLite database files
+*.db
 *.db-shm
 *.db-wal
 

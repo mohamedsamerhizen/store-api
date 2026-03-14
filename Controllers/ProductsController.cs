@@ -18,7 +18,6 @@ namespace store.Controllers
         }
 
         [HttpGet]
-        [ResponseCache(Duration = 60)]
         public async Task<IActionResult> GetProducts(
             int page = 1,
             int pageSize = 10,
@@ -44,7 +43,7 @@ namespace store.Controllers
         {
             var product = await _productService.CreateProductAsync(dto);
 
-            return Ok(ApiResponse.SuccessResponse("Product created successfully.", product));
+            return StatusCode(201, ApiResponse.SuccessResponse("Product created successfully.", product));
         }
 
         [HttpPut("{id}")]
